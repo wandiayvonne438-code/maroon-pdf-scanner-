@@ -13,31 +13,28 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-
     - name: Set up Java JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Accept Android SDK Licenses & Build APK
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Build Android APK with Cordova
       run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        npm init -y
-        npm install @capacitor/core @capacitor/cli @capacitor/android
-        npx cap init "Maroon PDF" "com.maroon.pdfscanner" --web-dir .
-        npx cap add android
-        npx cap sync
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleDebug
+        npm install -g cordova
+        cordova create maroon_app com.maroon.pdfscanner "Maroon PDF"
+        cp index.html maroon_app/www/
+        cd maroon_app
+        cordova platform add android
+        cordova build android --no-telemetry
 
     - name: Upload Native APK
       uses: actions/upload-artifact@v4
       with:
         name: Maroon-PDF-Scanner-APK
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        path: maroon_app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
