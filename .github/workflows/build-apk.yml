@@ -24,11 +24,9 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Initialize Web App & Build Native Android APK
+    - name: Accept Android SDK Licenses & Build APK
       run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
         npm init -y
         npm install @capacitor/core @capacitor/cli @capacitor/android
         npx cap init "Maroon PDF" "com.maroon.pdfscanner" --web-dir .
@@ -38,8 +36,8 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleDebug
 
-    - name: Upload Debug APK
+    - name: Upload Native APK
       uses: actions/upload-artifact@v4
       with:
-        name: Maroon-PDF-Scanner-App
+        name: Maroon-PDF-Scanner-APK
         path: android/app/build/outputs/apk/debug/app-debug.apk
