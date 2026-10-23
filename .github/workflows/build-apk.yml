@@ -24,18 +24,28 @@ jobs:
       with:
         node-version: 20
 
-    - name: Build Android APK with Cordova
+    - name: Build Functional Android APK
       run: |
         npm install -g cordova
         cordova create maroon_app com.maroon.pdfscanner "Maroon PDF"
         cp index.html maroon_app/www/
         cd maroon_app
+        
+        # Add key Cordova plugins for file access, camera, and permissions
+        cordova plugin add cordova-plugin-file
+        cordova plugin add cordova-plugin-camera
+        cordova plugin add cordova-plugin-android-permissions
+        
+        # Enable Android WebView File Access & Navigation
+        sed -i '/<\/widget>/i \    <preference name="AllowInlineMediaPlayback" value="true" />\n    <preference name="AllowFileAccessFromFileURLs" value="true" />\n    <preference name="AllowUniversalAccessFromFileURLs" value="true" />\n    <preference name="AndroidInsecureFileModeEnabled" value="true" />\n    <access origin="*" />\n    <allow-navigation href="*" />' config.xml
+        
         cordova platform add android
         cordova build android --no-telemetry
+        
         mkdir -p ../dist
         cp platforms/android/app/build/outputs/apk/debug/app-debug.apk ../dist/Maroon-PDF-Scanner.apk
 
-    - name: Upload Clean APK for Client
+    - name: Upload Functional APK
       uses: actions/upload-artifact@v4
       with:
         name: Maroon-PDF-Scanner-App
