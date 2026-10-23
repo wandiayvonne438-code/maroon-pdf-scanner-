@@ -32,9 +32,11 @@ jobs:
         cd maroon_app
         cordova platform add android
         cordova build android --no-telemetry
+        mkdir -p ../dist
+        cp platforms/android/app/build/outputs/apk/debug/app-debug.apk ../dist/Maroon-PDF-Scanner.apk
 
-    - name: Upload Native APK
+    - name: Upload Clean APK for Client
       uses: actions/upload-artifact@v4
       with:
-        name: Maroon-PDF-Scanner-APK
-        path: maroon_app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        name: Maroon-PDF-Scanner-App
+        path: dist/Maroon-PDF-Scanner.apk
