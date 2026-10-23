@@ -10,16 +10,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Create Web App Package
+    - name: Package App
       run: |
-        mkdir -p output
-        zip -r output/maroon-pdf-scanner-app.zip index.html
+        mkdir -p build-output
+        zip -r build-output/maroon-pdf-app.zip index.html
 
-    - name: Upload Artifacts
+    - name: Upload Build Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: maroon-pdf-scanner-release
-        path: output/
+        name: maroon-pdf-release
+        path: build-output/
