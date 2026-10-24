@@ -2,420 +2,588 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Maroon PDF Reader & Smart Scanner</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons CDN -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- html2pdf.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Maroon PDF & Scan</title>
+    <!-- PDF.js for rendering PDFs on device -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- jsPDF for creating real PDF files from scanned documents/images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
-            --maroon-main: #800020;
-            --maroon-dark: #4A0012;
-            --maroon-light: #A52A2A;
+            --maroon-primary: #800020;
+            --maroon-dark: #4a0012;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-light: #f8fafc;
+            --accent: #e2e8f0;
         }
-        body {
-            background-color: #0f172a;
-            color: #f8fafc;
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
-        .bg-maroon { background-color: var(--maroon-main); }
-        .bg-maroon-dark { background-color: var(--maroon-dark); }
-        .text-maroon { color: var(--maroon-main); }
-        .border-maroon { border-color: var(--maroon-main); }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--maroon-main); border-radius: 4px; }
-
-        /* Mobile Frame Styling */
-        .camera-scanner-frame {
-            position: relative;
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--maroon-primary);
+            color: white;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Main Container */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .view-panel {
+            display: none;
+            padding: 16px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .view-panel.active {
+            display: block;
+        }
+
+        /* Home Dashboard Utilities */
+        .grid-utilities {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .util-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .util-card:active {
+            background: #334155;
+        }
+
+        .util-card svg {
+            width: 32px;
+            height: 32px;
+            fill: #f43f5e;
+        }
+
+        .util-card span {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Camera Scanner View */
+        #scanner-view {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
             background: #000;
         }
-        .scan-overlay-grid {
-            background-size: 30px 30px;
-            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+
+        .scanner-controls-top {
+            padding: 12px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            z-index: 5;
         }
-        .scan-laser-line {
-            height: 2px;
-            background: #ef4444;
-            box-shadow: 0 0 10px #ef4444;
-            animation: scanAnimation 2.5s infinite ease-in-out;
+
+        .filter-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
         }
-        @keyframes scanAnimation {
-            0% { top: 0%; opacity: 0.8; }
-            50% { top: 100%; opacity: 0.8; }
-            100% { top: 0%; opacity: 0.8; }
+
+        .filter-btn.active {
+            background: var(--maroon-primary);
+            font-weight: bold;
+        }
+
+        .camera-viewport {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #camera-video, #scanned-canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 10%;
+            left: 5%;
+            right: 5%;
+            bottom: 10%;
+            border: 2px dashed var(--maroon-primary);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .scanner-controls-bottom {
+            padding: 20px;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .shutter-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: var(--maroon-primary);
+            border: 4px solid white;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(225, 29, 72, 0.5);
+        }
+
+        .shutter-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Reader View */
+        #reader-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        canvas.pdf-page-canvas {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            background: white;
+        }
+
+        /* Action Modal / Controls */
+        .btn-primary {
+            background: var(--maroon-primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-primary:active {
+            background: var(--maroon-dark);
+        }
+
+        /* Navigation Bar */
+        nav {
+            background: #0f172a;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 10;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #f43f5e;
+            font-weight: bold;
+        }
+
+        .nav-item svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        /* File Select Modal Input */
+        input[type="file"] {
+            display: none;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between max-w-md mx-auto relative border-x border-slate-800 shadow-2xl">
+<body>
 
-    <!-- Top App Bar -->
-    <header class="bg-maroon text-white p-4 sticky top-0 z-30 shadow-md flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <i class="fa-solid fa-file-pdf text-2xl text-red-200"></i>
-            <h1 class="text-xl font-bold tracking-wide" id="appTitle">Maroon PDF & Scan</h1>
-        </div>
-        <div class="flex items-center space-x-3">
-            <button onclick="togglePinLockModal()" class="p-2 hover:bg-maroon-dark rounded-full transition">
-                <i class="fa-solid fa-lock text-lg"></i>
-            </button>
-            <button onclick="switchTab('settings')" class="p-2 hover:bg-maroon-dark rounded-full transition">
-                <i class="fa-solid fa-gear text-lg"></i>
-            </button>
-        </div>
+    <!-- Header -->
+    <header>
+        <h1>📄 Maroon PDF & Scan</h1>
     </header>
 
-    <!-- Main Dynamic Content Container -->
-    <main class="flex-1 p-4 overflow-y-auto pb-24" id="mainContainer">
-
-        <!-- DASHBOARD TAB -->
-        <section id="tab-home" class="space-y-6">
-            
-            <!-- Quick Action Grid (Matching Screenshots) -->
-            <div>
-                <h2 class="text-xs uppercase font-semibold text-slate-400 mb-3 tracking-wider">Quick Utilities</h2>
-                <div class="grid grid-cols-4 gap-3 text-center">
-                    
-                    <button onclick="openSmartScanner()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-maroon/20 text-red-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-camera-retro"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">Smart Scan</span>
-                    </button>
-
-                    <button onclick="triggerImageToPdf()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-red-900/30 text-red-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-file-image"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">Image to PDF</span>
-                    </button>
-
-                    <button onclick="triggerDocxToPdf()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-blue-900/30 text-blue-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-file-word"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">Docx to PDF</span>
-                    </button>
-
-                    <button onclick="triggerOcrExtract()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-amber-900/30 text-amber-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-font"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">OCR Extract</span>
-                    </button>
-
-                    <button onclick="triggerPdfToJpg()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-pink-900/30 text-pink-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-images"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">PDF to JPG</span>
-                    </button>
-
-                    <button onclick="triggerMergePdf()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-amber-900/30 text-amber-500 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-object-group"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">Merge PDF</span>
-                    </button>
-
-                    <button onclick="triggerCompressPdf()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-rose-900/30 text-rose-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-file-compress"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">Compress</span>
-                    </button>
-
-                    <button onclick="triggerMoreTools()" class="flex flex-col items-center p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 hover:bg-slate-700 transition">
-                        <div class="w-12 h-12 bg-emerald-900/30 text-emerald-400 rounded-full flex items-center justify-center mb-2 text-xl">
-                            <i class="fa-solid fa-cubes"></i>
-                        </div>
-                        <span class="text-[11px] font-medium text-slate-200 leading-tight">More</span>
-                    </button>
-
+    <!-- Main View Panels -->
+    <main>
+        <!-- HOME PANEL -->
+        <section id="panel-home" class="view-panel active">
+            <h2 style="font-size: 1rem; margin-bottom: 12px; color: #94a3b8;">Quick Utilities</h2>
+            <div class="grid-utilities">
+                <div class="util-card" onclick="triggerFilePicker('image-to-pdf')">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>
+                    <span>Image to PDF</span>
+                </div>
+                <div class="util-card" onclick="triggerFilePicker('pdf-reader')">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5h3v1.5h-3v-1.5zm0-3h3v1.5h-3V8.5zM15 15H8.5v-1.5H15V15z"/></svg>
+                    <span>Open & Read PDF</span>
+                </div>
+                <div class="util-card" onclick="triggerFilePicker('compress-pdf')">
+                    <svg viewBox="0 0 24 24"><path d="M16 4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-1 10h-2v3h-2v-3H9l3-3 3 3z"/></svg>
+                    <span>Compress PDF (< 1MB)</span>
+                </div>
+                <div class="util-card" onclick="triggerFilePicker('docx-to-pdf')">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    <span>DOCX / Text to PDF</span>
                 </div>
             </div>
 
-            <!-- Ad Banner Placeholder -->
-            <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-3 flex items-center justify-between text-xs text-slate-400">
-                <div class="flex items-center space-x-2">
-                    <span class="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-[10px] font-bold">AD</span>
-                    <span>Fast Mobile PDF Reader Pro</span>
-                </div>
-                <i class="fa-solid fa-chevron-right text-slate-500"></i>
+            <div style="background: var(--card-bg); padding: 16px; border-radius: 12px; margin-top: 10px;">
+                <h3 style="font-size: 0.95rem; margin-bottom: 8px;">Active Document Status</h3>
+                <p id="status-text" style="font-size: 0.85rem; color: #94a3b8;">No file selected. Select a utility above or tap Scan below.</p>
+                <button id="download-btn" class="btn-primary" style="display: none;" onclick="exportProcessedPDF()">Save / Download PDF</button>
             </div>
-
-            <!-- Recent Documents Section -->
-            <div>
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Recent Documents</h2>
-                    <span class="text-xs text-red-400 cursor-pointer" onclick="openSamplePdf()">View Demo PDF</span>
-                </div>
-
-                <div class="space-y-2" id="recentDocList">
-                    <div onclick="openSamplePdf()" class="flex items-center justify-between p-3 bg-slate-800/60 rounded-xl border border-slate-700/50 hover:bg-slate-700/60 cursor-pointer transition">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-maroon/30 text-red-400 rounded-lg flex items-center justify-center text-lg">
-                                <i class="fa-solid fa-file-pdf"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-medium text-slate-100">Project_Contract_2026.pdf</h3>
-                                <p class="text-xs text-slate-400">2.4 MB • Updated Today</p>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-ellipsis-vertical text-slate-400 px-2"></i>
-                    </div>
-
-                    <div onclick="openSamplePdf()" class="flex items-center justify-between p-3 bg-slate-800/60 rounded-xl border border-slate-700/50 hover:bg-slate-700/60 cursor-pointer transition">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-maroon/30 text-red-400 rounded-lg flex items-center justify-center text-lg">
-                                <i class="fa-solid fa-file-pdf"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-medium text-slate-100">Scanned_Receipt_Passport.pdf</h3>
-                                <p class="text-xs text-slate-400">1.1 MB • Yesterday</p>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-ellipsis-vertical text-slate-400 px-2"></i>
-                    </div>
-                </div>
-            </div>
-
         </section>
 
-        <!-- SMART SCANNER MODAL / VIEW -->
-        <section id="tab-scanner" class="hidden space-y-4">
-            <div class="flex justify-between items-center bg-slate-800 p-2 rounded-xl text-xs">
-                <span class="font-semibold text-slate-300">Mode:</span>
-                <div class="flex space-x-1">
-                    <button onclick="setScanMode('BW')" id="btn-mode-bw" class="px-2.5 py-1 rounded-lg bg-maroon text-white">B&W Filter</button>
-                    <button onclick="setScanMode('MAGIC')" id="btn-mode-magic" class="px-2.5 py-1 rounded-lg bg-slate-700 text-slate-300">Magic Color</button>
-                    <button onclick="setScanMode('ORIGINAL')" id="btn-mode-orig" class="px-2.5 py-1 rounded-lg bg-slate-700 text-slate-300">Original</button>
+        <!-- SCANNER PANEL -->
+        <section id="panel-scan" class="view-panel">
+            <div id="scanner-view">
+                <div class="scanner-controls-top">
+                    <button class="filter-btn active" onclick="setFilter('bw')">B&W Filter</button>
+                    <button class="filter-btn" onclick="setFilter('magic')">Magic Color</button>
+                    <button class="filter-btn" onclick="setFilter('original')">Original</button>
                 </div>
-            </div>
-
-            <!-- Viewfinder -->
-            <div class="camera-scanner-frame h-80 rounded-2xl border-2 border-maroon relative flex flex-col justify-between p-4 shadow-inner">
-                <div class="scan-overlay-grid absolute inset-0 pointer-events-none"></div>
-                <div class="scan-laser-line absolute left-0 right-0 z-10"></div>
-
-                <!-- Camera Corner Target Guides -->
-                <div class="flex justify-between z-20">
-                    <div class="w-8 h-8 border-t-4 border-l-4 border-red-500 rounded-tl-lg"></div>
-                    <div class="w-8 h-8 border-t-4 border-r-4 border-red-500 rounded-tr-lg"></div>
+                <div class="camera-viewport">
+                    <video id="camera-video" autoplay playsinline muted></video>
+                    <div class="scan-overlay"></div>
                 </div>
-                <div class="text-center z-20 bg-black/60 py-1 px-3 rounded-full self-center text-xs text-slate-300">
-                    Align document inside frame
-                </div>
-                <div class="flex justify-between z-20">
-                    <div class="w-8 h-8 border-b-4 border-l-4 border-red-500 rounded-bl-lg"></div>
-                    <div class="w-8 h-8 border-b-4 border-r-4 border-red-500 rounded-br-lg"></div>
-                </div>
-            </div>
-
-            <!-- Scanner Trigger Bar -->
-            <div class="flex justify-around items-center pt-2">
-                <button class="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
-                    <i class="fa-solid fa-images"></i>
-                </button>
-                <button onclick="captureScanPage()" class="w-16 h-16 bg-maroon border-4 border-white rounded-full flex items-center justify-center text-white text-2xl shadow-lg active:scale-95 transition">
-                    <i class="fa-solid fa-camera"></i>
-                </button>
-                <div class="text-xs text-center font-bold text-slate-300">
-                    Pages: <span id="scannedPageCount" class="text-red-400">0</span>
+                <div class="scanner-controls-bottom">
+                    <span id="page-count" style="font-size: 0.85rem; color: #aaa;">Scanned: 0</span>
+                    <button class="shutter-btn" onclick="captureDocument()"></button>
+                    <button class="filter-btn" style="background: var(--maroon-primary);" onclick="finishBatchScan()">Done</button>
                 </div>
             </div>
         </section>
 
-        <!-- PDF READER & EDITOR VIEW -->
-        <section id="tab-reader" class="hidden space-y-4">
-            <!-- PDF Toolbar Controls -->
-            <div class="flex justify-between items-center bg-slate-800 p-2 rounded-xl text-xs space-x-1">
-                <button onclick="toggleNightMode()" class="p-2 bg-slate-700 text-slate-200 rounded-lg">
-                    <i class="fa-solid fa-moon"></i> Night Mode
-                </button>
-                <button onclick="openSignatureDrawer()" class="p-2 bg-slate-700 text-slate-200 rounded-lg">
-                    <i class="fa-solid fa-signature"></i> Sign
-                </button>
-                <button onclick="triggerRedactTool()" class="p-2 bg-slate-700 text-slate-200 rounded-lg">
-                    <i class="fa-solid fa-eraser"></i> Redact
-                </button>
-                <button onclick="triggerAdGatedDownload()" class="p-2 bg-maroon text-white rounded-lg font-semibold">
-                    <i class="fa-solid fa-download"></i> Save PDF
-                </button>
-            </div>
-
-            <!-- PDF Page Renderer Box -->
-            <div id="pdfViewerCanvas" class="bg-white text-slate-900 p-6 rounded-xl min-h-[420px] shadow-2xl relative space-y-4 font-serif leading-relaxed">
-                <div class="border-b pb-3 flex justify-between items-center">
-                    <div>
-                        <h1 class="text-xl font-bold text-slate-900">Project Agreement</h1>
-                        <p class="text-xs text-slate-500">Ref: 2026-KE-00912</p>
-                    </div>
-                    <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Page 1 / 1</span>
-                </div>
-                <p class="text-xs text-slate-700">
-                    This document serves as a official verified agreement between the designated parties. All scanned documents are processed using fast on-device OCR engine.
-                </p>
-                <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-400 text-xs text-amber-900">
-                    <strong>Note:</strong> Sensitive information should be checked before final sharing.
-                </div>
-                
-                <!-- Signature Attachment Container -->
-                <div id="attachedSignature" class="hidden mt-8 border-t border-dashed pt-4">
-                    <span class="text-xs text-slate-400">Authorized Signature:</span>
-                    <div class="h-12 w-32 border border-slate-300 rounded flex items-center justify-center font-script text-lg text-slate-800 bg-slate-50 italic">
-                        Verified Sign
-                    </div>
-                </div>
+        <!-- READER PANEL -->
+        <section id="panel-reader" class="view-panel">
+            <div id="reader-container">
+                <p id="reader-placeholder" style="color: #94a3b8; text-align: center; margin-top: 40px;">Tap "Open & Read PDF" on the Home tab to load and view your document here.</p>
             </div>
         </section>
-
     </main>
 
-    <!-- Bottom Navigation Bar -->
-    <nav class="bg-slate-900 border-t border-slate-800 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 flex justify-around p-2">
-        <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-red-500">
-            <i class="fa-solid fa-house text-lg"></i>
-            <span class="text-[10px] mt-1">Home</span>
-        </button>
-        <button onclick="switchTab('scanner')" id="nav-scanner" class="flex flex-col items-center text-slate-400">
-            <i class="fa-solid fa-camera-viewfinder text-lg"></i>
-            <span class="text-[10px] mt-1">Scan</span>
-        </button>
-        <button onclick="switchTab('reader')" id="nav-reader" class="flex flex-col items-center text-slate-400">
-            <i class="fa-solid fa-book-open text-lg"></i>
-            <span class="text-[10px] mt-1">Reader</span>
-        </button>
+    <!-- Hidden Native File Inputs -->
+    <input type="file" id="file-input-image" accept="image/*" multiple onchange="handleImageSelection(event)">
+    <input type="file" id="file-input-pdf" accept="application/pdf" onchange="handlePDFSelection(event)">
+    <input type="file" id="file-input-docx" accept=".docx,.doc,.txt" onchange="handleDocxSelection(event)">
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-item active" onclick="switchTab('home')">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('scan')">
+            <svg viewBox="0 0 24 24"><path d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm9-8h-3.17L16 5H8L6.17 7H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z"/></svg>
+            <span>Scan</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('reader')">
+            <svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+            <span>Reader</span>
+        </div>
     </nav>
 
-    <!-- Signature Drawer Modal -->
-    <div id="signatureModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-2xl w-full max-w-xs p-4 space-y-3">
-            <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-slate-100">Draw Signature</h3>
-                <button onclick="closeSignatureDrawer()" class="text-slate-400 text-sm"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="bg-white h-32 rounded-xl flex items-center justify-center text-slate-400 text-xs border border-slate-600">
-                Sign Here (Touch Gesture Enabled)
-            </div>
-            <button onclick="applySignature()" class="w-full py-2 bg-maroon text-white text-xs font-bold rounded-lg">Attach to PDF</button>
-        </div>
-    </div>
-
-    <!-- Ad Gate Modal -->
-    <div id="adGateModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-2xl w-full max-w-xs p-5 text-center space-y-4">
-            <div class="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-xl">
-                <i class="fa-solid fa-[#000]"></i>
-            </div>
-            <h3 class="font-bold text-slate-100">Preparing PDF Download</h3>
-            <p class="text-xs text-slate-400">Please watch this quick ad sponsor to unlock your free high-quality PDF document.</p>
-            <div id="adCountdownTimer" class="text-2xl font-bold text-red-400">5</div>
-            <button id="finalDownloadBtn" disabled onclick="executePdfExport()" class="w-full py-2.5 bg-slate-700 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed">
-                Unlocking Download...
-            </button>
-        </div>
-    </div>
-
-    <!-- JavaScript Application Engine -->
+    <!-- App Logic Script -->
     <script>
-        let scannedCount = 0;
+        // PDF.js worker setup
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        function switchTab(tab) {
-            document.getElementById('tab-home').classList.add('hidden');
-            document.getElementById('tab-scanner').classList.add('hidden');
-            document.getElementById('tab-reader').classList.add('hidden');
+        let activeFilter = 'bw';
+        let scannedPages = [];
+        let currentVideoStream = null;
+        let generatedPDFBlob = null;
 
-            document.getElementById('nav-home').className = 'flex flex-col items-center text-slate-400';
-            document.getElementById('nav-scanner').className = 'flex flex-col items-center text-slate-400';
-            document.getElementById('nav-reader').className = 'flex flex-col items-center text-slate-400';
+        // Switch Navigation Tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
 
-            if (tab === 'home') {
-                document.getElementById('tab-home').classList.remove('hidden');
-                document.getElementById('nav-home').className = 'flex flex-col items-center text-red-500';
-            } else if (tab === 'scanner') {
-                document.getElementById('tab-scanner').classList.remove('hidden');
-                document.getElementById('nav-scanner').className = 'flex flex-col items-center text-red-500';
-            } else if (tab === 'reader') {
-                document.getElementById('tab-reader').classList.remove('hidden');
-                document.getElementById('nav-reader').className = 'flex flex-col items-center text-red-500';
+            if(tabName === 'home') {
+                document.getElementById('panel-home').classList.add('active');
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+                stopCamera();
+            } else if(tabName === 'scan') {
+                document.getElementById('panel-scan').classList.add('active');
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
+                startCamera();
+            } else if(tabName === 'reader') {
+                document.getElementById('panel-reader').classList.add('active');
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+                stopCamera();
             }
         }
 
-        function openSmartScanner() { switchTab('scanner'); }
-        function openSamplePdf() { switchTab('reader'); }
-
-        function captureScanPage() {
-            scannedCount++;
-            document.getElementById('scannedPageCount').innerText = scannedCount;
-            alert('Captured Page ' + scannedCount + ' with auto edge crop!');
+        // Camera Management
+        async function startCamera() {
+            try {
+                const constraints = { video: { facingMode: { ideal: "environment" } } };
+                currentVideoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoEl = document.getElementById('camera-video');
+                videoEl.srcObject = currentVideoStream;
+            } catch (err) {
+                alert("Camera Access Error: Please ensure camera permissions are granted in phone settings.");
+            }
         }
 
-        function setScanMode(mode) {
-            alert('Scanner filter set to: ' + mode);
+        function stopCamera() {
+            if (currentVideoStream) {
+                currentVideoStream.getTracks().forEach(track => track.stop());
+                currentVideoStream = null;
+            }
         }
 
-        function toggleNightMode() {
-            const viewer = document.getElementById('pdfViewerCanvas');
-            viewer.classList.toggle('bg-slate-900');
-            viewer.classList.toggle('text-white');
-            viewer.classList.toggle('bg-white');
-            viewer.classList.toggle('text-slate-900');
+        function setFilter(filterType) {
+            activeFilter = filterType;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
         }
 
-        function openSignatureDrawer() { document.getElementById('signatureModal').classList.remove('hidden'); }
-        function closeSignatureDrawer() { document.getElementById('signatureModal').classList.add('hidden'); }
+        // Capture Document Page
+        function captureDocument() {
+            const video = document.getElementById('camera-video');
+            if(!video.srcObject) return;
 
-        function applySignature() {
-            document.getElementById('attachedSignature').classList.remove('hidden');
-            closeSignatureDrawer();
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Apply Image Filter Process
+            applyFilterToCanvas(ctx, canvas.width, canvas.height, activeFilter);
+
+            scannedPages.push(canvas.toDataURL('image/jpeg', 0.85));
+            document.getElementById('page-count').innerText = `Scanned: ${scannedPages.length}`;
         }
 
-        function triggerRedactTool() {
-            alert('Redaction mode active! Tap on text lines to permanently black them out.');
-        }
+        function applyFilterToCanvas(ctx, width, height, filter) {
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const d = imgData.data;
 
-        function triggerAdGatedDownload() {
-            document.getElementById('adGateModal').classList.remove('hidden');
-            let timeLeft = 5;
-            const timerElem = document.getElementById('adCountdownTimer');
-            const downloadBtn = document.getElementById('finalDownloadBtn');
-
-            const countdown = setInterval(() => {
-                timeLeft--;
-                timerElem.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(countdown);
-                    timerElem.innerText = "Ready!";
-                    downloadBtn.disabled = false;
-                    downloadBtn.className = "w-full py-2.5 bg-maroon text-white text-xs font-bold rounded-xl cursor-pointer shadow-lg";
-                    downloadBtn.innerText = "Download PDF File Now";
+            if (filter === 'bw') {
+                for (let i = 0; i < d.length; i += 4) {
+                    const avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
+                    const v = avg > 120 ? 255 : 0; // High contrast thresholding
+                    d[i] = d[i + 1] = d[i + 2] = v;
                 }
-            }, 1000);
+            } else if (filter === 'magic') {
+                for (let i = 0; i < d.length; i += 4) {
+                    d[i] = Math.min(255, d[i] * 1.2);     // Boost color saturation
+                    d[i+1] = Math.min(255, d[i+1] * 1.2);
+                    d[i+2] = Math.min(255, d[i+2] * 1.2);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
         }
 
-        function executePdfExport() {
-            const element = document.getElementById('pdfViewerCanvas');
-            html2pdf().from(element).save('Maroon_Scanned_Document.pdf');
-            document.getElementById('adGateModal').classList.add('hidden');
+        // Batch Scan Completion
+        function finishBatchScan() {
+            if (scannedPages.length === 0) {
+                alert("Please tap the capture button to scan at least one page.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+
+            scannedPages.forEach((imgData, idx) => {
+                if (idx > 0) pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+            });
+
+            generatedPDFBlob = pdf.output('blob');
+            scannedPages = [];
+            document.getElementById('page-count').innerText = `Scanned: 0`;
+
+            document.getElementById('status-text').innerText = "Scanned Document converted to PDF successfully!";
+            document.getElementById('download-btn').style.display = 'block';
+            switchTab('home');
         }
 
-        function triggerImageToPdf() { alert('Select images from your Nokia gallery to convert to PDF.'); }
-        function triggerDocxToPdf() { alert('Select Word (.docx) file to convert.'); }
-        function triggerOcrExtract() { alert('OCR active: Select document image to extract text.'); }
-        function triggerPdfToJpg() { alert('Select PDF to extract high-resolution JPG images.'); }
-        function triggerMergePdf() { alert('Select 2 or more PDFs to combine into 1 document.'); }
-        function triggerCompressPdf() { alert('Select PDF file to compress below 2MB.'); }
-        function triggerMoreTools() { alert('Additional PDF tools ready.'); }
-        function togglePinLockModal() { alert('Security PIN Lock active.'); }
+        // File Selection Handlers
+        function triggerFilePicker(type) {
+            if (type === 'image-to-pdf' || type === 'compress-pdf') {
+                document.getElementById('file-input-image').click();
+            } else if (type === 'pdf-reader') {
+                document.getElementById('file-input-pdf').click();
+            } else if (type === 'docx-to-pdf') {
+                document.getElementById('file-input-docx').click();
+            }
+        }
+
+        function handleImageSelection(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            let loaded = 0;
+
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (index > 0) pdf.addPage();
+                    pdf.addImage(e.target.result, 'JPEG', 0, 0, 210, 297);
+                    loaded++;
+
+                    if (loaded === files.length) {
+                        // Compress output quality if needed
+                        generatedPDFBlob = pdf.output('blob');
+                        document.getElementById('status-text').innerText = `Successfully converted ${files.length} image(s) to PDF!`;
+                        document.getElementById('download-btn').style.display = 'block';
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function handlePDFSelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileURL = URL.createObjectURL(file);
+            renderPDFInReader(fileURL);
+            switchTab('reader');
+        }
+
+        function handleDocxSelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const textContent = e.target.result;
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF();
+                
+                const splitText = pdf.splitTextToSize(textContent, 180);
+                pdf.text(splitText, 15, 15);
+
+                generatedPDFBlob = pdf.output('blob');
+                document.getElementById('status-text').innerText = `Converted document "${file.name}" to PDF!`;
+                document.getElementById('download-btn').style.display = 'block';
+            };
+            reader.readAsText(file);
+        }
+
+        // Render PDF in Reader View using PDF.js
+        function renderPDFInReader(url) {
+            const container = document.getElementById('reader-container');
+            container.innerHTML = ''; // Clear existing
+
+            pdfjsLib.getDocument(url).promise.then(pdf => {
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    pdf.getPage(pageNum).then(page => {
+                        const scale = 1.5;
+                        const viewport = page.getViewport({ scale: scale });
+                        const canvas = document.createElement('canvas');
+                        canvas.className = 'pdf-page-canvas';
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+
+                        const renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+
+                        container.appendChild(canvas);
+                        page.render(renderContext);
+                    });
+                }
+            }).catch(err => {
+                container.innerHTML = `<p style="color: #f43f5e; padding: 20px;">Error rendering PDF: ${err.message}</p>`;
+            });
+        }
+
+        // Save & Export PDF back to Phone Storage
+        function exportProcessedPDF() {
+            if (!generatedPDFBlob) return;
+
+            const customName = prompt("Enter file name to save back to phone storage:", "Maroon_Scanned_Document.pdf");
+            if (!customName) return;
+
+            const finalFileName = customName.endsWith('.pdf') ? customName : `${customName}.pdf`;
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(generatedPDFBlob);
+            link.download = finalFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            alert(`Saved "${finalFileName}" directly to your phone's Download directory!`);
+        }
     </script>
 </body>
 </html>
