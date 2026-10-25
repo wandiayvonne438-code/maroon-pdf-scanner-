@@ -24,20 +24,31 @@ jobs:
       with:
         node-version: 20
 
-    - name: Build Functional Android APK
+    - name: Build Android APK with Permissions
       run: |
         npm install -g cordova
         cordova create maroon_app com.maroon.pdfscanner "Maroon PDF"
         cp index.html maroon_app/www/
         cd maroon_app
         
-        # Add key Cordova plugins for file access, camera, and permissions
+        # Add core plugins
         cordova plugin add cordova-plugin-file
         cordova plugin add cordova-plugin-camera
         cordova plugin add cordova-plugin-android-permissions
         
-        # Enable Android WebView File Access & Navigation
-        sed -i '/<\/widget>/i \    <preference name="AllowInlineMediaPlayback" value="true" />\n    <preference name="AllowFileAccessFromFileURLs" value="true" />\n    <preference name="AllowUniversalAccessFromFileURLs" value="true" />\n    <preference name="AndroidInsecureFileModeEnabled" value="true" />\n    <access origin="*" />\n    <allow-navigation href="*" />' config.xml
+        # Inject permissions and webview settings into config.xml
+        sed -i '/<\/widget>/i \
+            <preference name="AllowInlineMediaPlayback" value="true" />\n\
+            <preference name="AllowFileAccessFromFileURLs" value="true" />\n\
+            <preference name="AllowUniversalAccessFromFileURLs" value="true" />\n\
+            <preference name="AndroidInsecureFileModeEnabled" value="true" />\n\
+            <config-file target="AndroidManifest.xml" parent="/manifest">\n\
+                <uses-permission android:name="android.permission.CAMERA" />\n\
+                <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n\
+                <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n\
+            </config-file>\n\
+            <access origin="*" />\n\
+            <allow-navigation href="*" />' config.xml
         
         cordova platform add android
         cordova build android --no-telemetry
