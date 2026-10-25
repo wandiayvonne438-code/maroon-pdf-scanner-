@@ -583,7 +583,18 @@
             document.body.removeChild(link);
 
             alert(`Saved "${finalFileName}" directly to your phone's Download directory!`);
-        }
+        }        // Automatically request camera permission on app startup
+        window.addEventListener('DOMContentLoaded', () => {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(track => track.stop());
+                    })
+                    .catch(err => {
+                        console.log("Camera permission prompt handled: ", err);
+                    });
+            }
+        });
     </script>
 </body>
 </html>
